@@ -130,8 +130,6 @@ function init_file(key, db)
         local n3 = bit.band(bit.rshift(i, 8), 255)
         local n4 = bit.band(bit.rshift(i, 0), 255)
 
-        -- print("IP: " .. n1 .. "." .. n2 .. "." .. n3 .. "." .. n4)
-
         -- If we are at XXX.XXX.XXX.0, and there are 255 or more results left
         -- to iterate over, we know that the full octet is for a single profile.
         -- Instead of creating an array, we'll just point directly to that profile
