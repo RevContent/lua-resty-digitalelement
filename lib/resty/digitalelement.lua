@@ -51,17 +51,17 @@ end
 
 -- Create the trie to store the IP addresses
 -- by octet.
-function createTrie(key, n1, n2, n3)
+function createTrie(key, ...)
 
-  -- Possibly utilize metatables to speed this up.
-  if not lst[key][n1] then
-    lst[key][n1] = {}
-  end
-  if not lst[key][n1][n2] then
-    lst[key][n1][n2] = {}
-  end
-  if not lst[key][n1][n2][n3] then
-    lst[key][n1][n2][n3] = {}
+  local t = lst[key]
+
+  for _, k in ipairs{...} do
+
+    -- If key doesn't exist yet, create it.
+    if not t[k] then t[k] = {} end
+
+    t = t[k]
+  
   end
 
   return
@@ -113,9 +113,16 @@ function init_file(key, db)
         rsp[key][digest] = entry
       end
 
+      -- Have loop skip to value if we were able
+      -- to do a bulk insert.
+      skip_to = 0
+
       -- Iterate over IP range
       for i = s_ip, e_ip
       do
+
+        -- Have we already processed this in a bulk insert?
+        if i < skip_to then goto continue end
 
         -- Turn int back into IP notation
         local n1 = bit.band(bit.rshift(i, 24), 255)
@@ -123,12 +130,34 @@ function init_file(key, db)
         local n3 = bit.band(bit.rshift(i, 8), 255)
         local n4 = bit.band(bit.rshift(i, 0), 255)
 
-        -- Create/Validate Trie
-        createTrie(key, n1, n2, n3)
-        table.insert(lst[key][n1][n2][n3], n4, digest)
+        -- print("IP: " .. n1 .. "." .. n2 .. "." .. n3 .. "." .. n4)
 
-        -- Metrics
-        ips = ips + 1
+        -- If we are at XXX.XXX.XXX.0, and there are 255 or more results left
+        -- to iterate over, we know that the full octet is for a single profile.
+        -- Instead of creating an array, we'll just point directly to that profile
+        -- from n3.
+        if n4 == 0 and (e_ip - i) >= 255 then
+
+          createTrie(key, n1, n2)
+          lst[key][n1][n2][n3] = digest
+          
+          skip_to = i + 256
+          ips = ips + 255
+
+        -- Create simple Trie with n3 being an array, and n4 being the index with a
+        -- value of the profile array location.
+        else
+
+          -- Create/Validate Trie
+          createTrie(key, n1, n2, n3)
+          table.insert(lst[key][n1][n2][n3], n4, digest)
+
+          -- Metrics
+          ips = ips + 1
+
+        end
+
+        ::continue::
       
       end
 
@@ -194,12 +223,26 @@ function _M.lookup(key, ip)
   end
 
   -- Check to see if value exists in Trie
-  local profile = lookup(lst[key], iparr[1], iparr[2], iparr[3], iparr[4])
+  local profile = lookup(lst[key], iparr[1], iparr[2], iparr[3])
   if profile == nil then
-    return nil, "No Result."
-  else
+  -- Nothing Found
+    goto noip
+
+  elseif type(profile) == "string" then
+  -- Whole /24 matches to a single profile
     return rsp[key][profile], nil
+
+  else
+  -- Key has _something_ in it, check to see if our IP is in it.
+    local i = lst[key][iparr[1]][iparr[2]][iparr[3]][iparr[4]]
+    if i ~= nil then
+      return rsp[key][i], nil
+    end
   end
+
+  -- No IPs found
+  ::noip::
+  return nil, "Unable to locate IP."
 
 end
 

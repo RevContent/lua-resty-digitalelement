@@ -79,4 +79,4 @@ each line being a single JSON string. The required key/value pairs are `start-ip
 
 - Faster importing of data
 - Support CSV & compressed files
-- Utilized Compressed Tries
+- Better tries optimization, currently only the fourth octet is optimized.
