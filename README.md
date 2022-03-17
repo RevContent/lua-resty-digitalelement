@@ -34,7 +34,7 @@ init_worker_by_lua_block {
 ```lua
 
 local res, err = de.lookup("geo", ngx.var.remote_addr)
-if not res then
+if err then
   ngx.log(ngx.ERR, "IP Geo Lookup Failed: " .. err)
 else
   ngx.say(res["country"])
@@ -44,7 +44,7 @@ else
 end
 
 local res, err = de.lookup("vpn", ngx.var.remote_addr)
-if not res then
+if err then
   ngx.log(ngx.ERR,"IP VPN Lookup Failed: " .. err)
 else
   ngx.say(res["vpn-proxy-type"])
