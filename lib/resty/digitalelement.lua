@@ -139,8 +139,8 @@ function init_file(key, db)
           createTrie(key, n1, n2)
           lst[key][n1][n2][n3] = digest
           
-          skip_to = i + 256
-          ips = ips + 255
+          skip_to = i + 256 -- Go to x.x.0.0 -> x.x.1.0
+          ips = ips + 256   -- Add IPs above into count
 
         -- Create simple Trie with n3 being an array, and n4 being the index with a
         -- value of the profile array location.
